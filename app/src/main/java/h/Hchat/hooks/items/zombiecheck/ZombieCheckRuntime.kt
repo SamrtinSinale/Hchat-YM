@@ -1,5 +1,7 @@
 package h.Hchat.hooks.items.zombiecheck
 
+import h.Hchat.hooks.items.customnotify.CustomNotificationIconStore
+
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -579,7 +581,7 @@ class ZombieCheckRuntime(
                 Notification.Builder(context)
             }
             builder
-                .setSmallIcon(context.applicationInfo.icon.takeIf { it != 0 } ?: android.R.drawable.stat_notify_sync)
+                .let { CustomNotificationIconStore.apply(it, context.applicationInfo.icon.takeIf { icon -> icon != 0 } ?: android.R.drawable.stat_notify_sync, context) }
                 .setContentTitle("僵尸粉检测")
                 .setContentText("已检测 ${state.checkedCount}/${state.totalCount}，异常 ${state.deadCount}，失败 ${state.unknownCount}")
                 .setProgress(state.totalCount, state.checkedCount, false)

@@ -1,5 +1,7 @@
 package h.Hchat.hooks.items.moments
 
+import h.Hchat.hooks.items.customnotify.CustomNotificationIconStore
+
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -187,7 +189,7 @@ private class MomentsPostNotificationRuntime(
         } else {
             Notification.Builder(context)
         }
-        builder.setSmallIcon(android.R.drawable.stat_notify_chat)
+        CustomNotificationIconStore.apply(builder, android.R.drawable.stat_notify_chat, context)
             .setContentTitle(title)
             .setContentText(body)
             .setStyle(

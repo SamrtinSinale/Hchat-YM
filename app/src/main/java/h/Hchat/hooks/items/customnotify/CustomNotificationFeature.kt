@@ -18,6 +18,11 @@ class CustomNotificationFeature : BaseFeature() {
     override fun onFeatureInstall(context: FeatureContext) {
         CustomNotificationRuntime.install(context)
         subscribe(Events.DexReady::class.java) {
+            WeChatApis.interaction().chatPage()?.subscribe { event ->
+                if (event != null && event.isEnter()) {
+                    CustomNotificationRuntime.clearCustomNotificationsForTalker(context.hostContext(), event.talker)
+                }
+            }?.let(::trackSubscription)
             val observe = WeChatApis.message().observe()
             if (observe == null) {
                 HLog.e("$TAG 消息观察 API 未就绪")

@@ -259,8 +259,9 @@ object QuickMarkReadRuntime {
         if (!target.hasUnreadVoice) return true
         val voice = target.pendingVoice
         if (voice == null) {
-            HLog.e("$TAG 未找到待标记的语音消息: ${target.username}")
-            return false
+            HLog.e("$TAG 未找到待标记的语音消息: ${target.username}，仅保留会话原生已读结果")
+            // 对应 6.5.0 补丁的缺失语音分支；不伪造或修改不存在的语音对象。
+            return true
         }
         val nativeMessage = database.nativeMessageById(voice.msgId)
         val nativeUpdated = nativeMessage != null && database.updateNativeMessageContent(

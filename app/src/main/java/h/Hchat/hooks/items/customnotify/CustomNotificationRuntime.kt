@@ -126,6 +126,21 @@ object CustomNotificationRuntime {
         return notification.extras?.getString(EXTRA_TALKER).orEmpty()
     }
 
+    @JvmStatic
+    fun clearCustomNotificationsForTalker(context: Context?, talker: String?) {
+        val key = talker?.trim().orEmpty()
+        if (key.isBlank() || Build.VERSION.SDK_INT < 23) return
+        val manager = context?.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager ?: return
+        runCatching {
+            manager.activeNotifications.forEach { status ->
+                val extras = status.notification?.extras ?: return@forEach
+                if (extras.getBoolean(MARK_HCHAT, false) && extras.getString(EXTRA_TALKER) == key) {
+                    if (status.tag == null) manager.cancel(status.id) else manager.cancel(status.tag, status.id)
+                }
+            }
+        }.onFailure { HLog.e("$TAG 清理已打开会话通知失败: $key", it) }
+    }
+
     fun install(context: FeatureContext) {
         if (installed.compareAndSet(false, true)) {
             QuickMarkReadRuntime.install(context)
@@ -869,7 +884,7 @@ object CustomNotificationRuntime {
         )
         return NotifyPayload(
             title = fallbackTitle,
-            text = if (rule.showDetail) sanitizeDetail(nativeText).ifBlank { "[收到一条新消息]" } else "[收到一条新消息]",
+            text = if (rule.showDetail) cleanNotificationText(sanitizeDetail(nativeText), fallbackTitle).ifBlank { "[收到一条新消息]" } else "[收到一条新消息]",
             unreadCount = notification.extras?.getInt(EXTRA_UNREAD_COUNT, 0)
                 ?.takeIf { it > 0 }
                 ?: (activeCustomNotificationCount(context, rule.talker) + 1),
@@ -886,16 +901,16 @@ object CustomNotificationRuntime {
 
     private fun notificationTextLine(notification: Notification): String {
         val lines = notification.extras?.getCharSequenceArray(Notification.EXTRA_TEXT_LINES).orEmpty()
-        return lines.lastOrNull { !it.isNullOrBlank() }?.toString().orEmpty()
+        return lines.lastOrNull { !it.isNullOrBlank() }?.toString()?.let(::removeUnreadPrefix).orEmpty()
     }
 
     private fun messageDetailText(message: WeChatMessageObserveApi.ObservedMessage): String {
         val body = message.message?.bodyContent().orEmpty().ifBlank { message.content }.trim()
+        if (message.isEmoji) return CustomNotificationText.emoji(sanitizeDetail(body))
         if (message.isText) return sanitizeDetail(stripGroupSenderPrefix(body))
         if (message.isImage) return "[图片]"
         if (message.isVoice) return "[语音]"
         if (message.isVideo) return "[视频]"
-        if (message.isEmoji) return "[表情]"
         if (message.isLocation) return nativeLikeDetail(body).ifBlank { "[位置]" }
         if (message.isRedPacket) return "[红包]"
         if (message.isTransfer) {
@@ -1042,15 +1057,16 @@ object CustomNotificationRuntime {
             payload.unreadCount
         }
         val icon = context.applicationInfo.icon.takeIf { it != 0 } ?: android.R.drawable.stat_notify_chat
-        val displayText = unreadText(payload.text, unreadCount)
+        val cleanText = cleanNotificationText(payload.text, payload.title)
+        val displayText = unreadText(cleanText, unreadCount)
         val contentIntent = payload.contentIntent ?: chatPendingIntent(context, rule.talker, notificationId)
         val notificationWhen = normalizeNotificationWhen(payload.whenMillis)
         val mergedLines = if (rule.mergeByTalker) {
-            mergedNotificationLines(manager, rule.talker, payload.text)
+            mergedNotificationLines(manager, rule.talker, cleanText)
         } else {
             emptyList()
         }
-        builder.setSmallIcon(icon)
+        CustomNotificationIconStore.apply(builder, icon, context)
             .setContentTitle(payload.title)
             .setContentText(displayText)
             .setTicker(displayText)
@@ -1066,6 +1082,7 @@ object CustomNotificationRuntime {
             .setExtras(Bundle().apply {
                 putBoolean(MARK_HCHAT, true)
                 putString(EXTRA_TALKER, rule.talker)
+                putInt(EXTRA_NOTIFY_ID, notificationId)
                 putInt(EXTRA_UNREAD_COUNT, unreadCount)
                 putLong(EXTRA_NOTIFICATION_TOKEN, notificationToken)
                 if (rule.mergeByTalker) {
@@ -1075,8 +1092,7 @@ object CustomNotificationRuntime {
         if (rule.mergeByTalker && mergedLines.size > 1) {
             val style = Notification.InboxStyle()
                 .setBigContentTitle(payload.title)
-                .setSummaryText("${unreadCount}条新消息")
-            mergedLines.forEach { style.addLine(it) }
+            CustomNotificationText.expandedLines(mergedLines, unreadCount).forEach { style.addLine(it) }
             builder.setStyle(style)
         }
         payload.largeIcon?.let { builder.setLargeIcon(it) }
@@ -1107,7 +1123,7 @@ object CustomNotificationRuntime {
             extras?.putBoolean(Notification.EXTRA_SHOW_WHEN, true)
             extras?.putBoolean(Notification.EXTRA_SHOW_CHRONOMETER, false)
             if (rule.mergeByTalker) {
-                extras?.putCharSequenceArray(Notification.EXTRA_TEXT_LINES, mergedLines.toTypedArray())
+                extras?.putCharSequenceArray(Notification.EXTRA_TEXT_LINES, CustomNotificationText.expandedLines(mergedLines, unreadCount).toTypedArray())
             }
         }
         manager.notify(notificationId, notification)
@@ -1176,9 +1192,9 @@ object CustomNotificationRuntime {
         return text.takeIf { it.isNotBlank() }?.let { listOf(removeUnreadPrefix(it)) }.orEmpty()
     }
 
-    private fun removeUnreadPrefix(text: String): String {
-        return text.replace(Regex("^\\[\\d+条]"), "").trim()
-    }
+    private fun removeUnreadPrefix(text: String): String = CustomNotificationText.removeCount(text)
+
+    private fun cleanNotificationText(text: String, title: String): String = CustomNotificationText.clean(text, title)
 
     private fun claimNotification(key: NotificationDedupKey): Long? {
         val now = SystemClock.elapsedRealtime()
@@ -1247,10 +1263,7 @@ object CustomNotificationRuntime {
         }
     }
 
-    private fun unreadText(text: String, unreadCount: Int): String {
-        if (unreadCount <= 1 || text.matches(Regex("^\\[\\d+条].*"))) return text
-        return "[$unreadCount\u6761]$text"
-    }
+    private fun unreadText(text: String, unreadCount: Int): String = CustomNotificationText.unread(text, unreadCount)
 
     private fun trimOldChannels(manager: NotificationManager) {
         if (Build.VERSION.SDK_INT < 26) return
@@ -1423,11 +1436,13 @@ object CustomNotificationRuntime {
         }
         val completionToken = System.nanoTime()
         runCatching {
+            val notificationIdFromExtras = current.extras?.getInt(EXTRA_NOTIFY_ID, notificationId) ?: notificationId
             val builder = Notification.Builder.recoverBuilder(context, current)
                 .setOnlyAlertOnce(true)
                 .setContentText(if (sent) "已回复：$reply" else "发送失败，请重试")
                 .setExtras(Bundle(current.extras).apply {
                     putLong(EXTRA_REPLY_COMPLETION_TOKEN, completionToken)
+                    putInt(EXTRA_NOTIFY_ID, notificationIdFromExtras)
                 })
             if (sent) builder.setRemoteInputHistory(arrayOf<CharSequence>(reply))
             manager.notify(notificationId, builder.build())
@@ -1461,11 +1476,13 @@ object CustomNotificationRuntime {
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager ?: return
         runCatching {
             manager.cancel(fallbackNotificationId)
+            if (Build.VERSION.SDK_INT < 23) return@runCatching
             manager.activeNotifications.forEach { status ->
                 val extras = status.notification?.extras ?: return@forEach
-                if (extras.getBoolean(MARK_HCHAT, false) && extras.getString(EXTRA_TALKER) == talker) {
-                    if (status.tag == null) manager.cancel(status.id) else manager.cancel(status.tag, status.id)
-                }
+                if (!extras.getBoolean(MARK_HCHAT, false) || extras.getString(EXTRA_TALKER) != talker) return@forEach
+                val notificationId = extras.getInt(EXTRA_NOTIFY_ID, status.id)
+                if (status.id != notificationId) return@forEach
+                if (status.tag == null) manager.cancel(status.id) else manager.cancel(status.tag, status.id)
             }
         }.onFailure {
             HLog.e("$TAG 清理会话通知失败: $talker", it)

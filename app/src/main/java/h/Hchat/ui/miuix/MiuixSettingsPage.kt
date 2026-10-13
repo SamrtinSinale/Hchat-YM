@@ -250,6 +250,8 @@ import h.Hchat.hooks.items.conversationtabs.ConversationTabsStore
 import h.Hchat.hooks.items.custombottombar.CustomBottomBarFeature
 import h.Hchat.hooks.items.custombottombar.FloatingBottomBarSettings
 import h.Hchat.hooks.items.customnotify.CustomNotificationFeature
+import h.Hchat.hooks.items.customnotify.CustomNotificationIconFeature
+import h.Hchat.hooks.items.customnotify.CustomNotificationIconMiuixPage
 import h.Hchat.hooks.items.customnotify.CustomNotificationRule
 import h.Hchat.hooks.items.customnotify.CustomNotificationRuntime
 import h.Hchat.hooks.items.customfriendavatar.CustomFriendAvatarFeature
@@ -3889,6 +3891,7 @@ private fun featureSubSearchTerms(featureId: String): List<String> {
         CustomNotificationFeature.ID -> listOf(
             "自定义通知", "通知规则", "通知模板", "私聊通知", "群聊通知", "公众号通知", "艾特我", "@我", "艾特全体", "@所有人", "免打扰通知", "微信消息免打扰"
         )
+        CustomNotificationIconFeature.ID -> listOf("自定义通知图标", "通知小图标", "修改通知图标", "恢复默认图标")
         KeywordNotificationFeature.ID -> listOf(
             "关键词通知", "关键词列表", "关键词模板", "通知模板", "艾特我", "@我", "艾特全体", "@所有人", "允许入库", "消息入库"
         )
@@ -4667,6 +4670,7 @@ private fun FeatureSettingsPage(
         ConversationGroupFeature.ID -> ConversationGroupMiuixPage(context, provider, onBack)
         ConversationTabsFeature.ID -> ConversationTabsMiuixPage(context, onBack)
         CustomNotificationFeature.ID -> CustomNotificationMiuixPage(context, provider, onBack)
+        CustomNotificationIconFeature.ID -> CustomNotificationIconMiuixPage(context, provider, onBack)
         KeywordNotificationFeature.ID -> KeywordNotificationMiuixPage(context, provider, onBack)
         TextSpeechFeature.ID -> TextSpeechMiuixPage(context, provider, onBack)
         ZombieCheckFeature.ID -> ZombieCheckMiuixPage(context, provider, onBack)

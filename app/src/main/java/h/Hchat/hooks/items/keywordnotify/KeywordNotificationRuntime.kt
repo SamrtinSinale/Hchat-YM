@@ -1,5 +1,7 @@
 package h.Hchat.hooks.items.keywordnotify
 
+import h.Hchat.hooks.items.customnotify.CustomNotificationIconStore
+
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -403,7 +405,7 @@ object KeywordNotificationRuntime {
         val id = nextNotifyId(talker)
         val icon = context.applicationInfo.icon.takeIf { it != 0 } ?: android.R.drawable.stat_notify_chat
         val avatarId = talker
-        builder.setSmallIcon(icon)
+        CustomNotificationIconStore.apply(builder, icon, context)
             .setContentTitle(highlight(title, keyword))
             .setContentText(highlight(body, keyword))
             .setTicker(body)

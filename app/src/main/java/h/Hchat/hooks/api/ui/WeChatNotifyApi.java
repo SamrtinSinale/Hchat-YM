@@ -76,8 +76,8 @@ public final class WeChatNotifyApi {
             Notification.Builder builder = Build.VERSION.SDK_INT >= 26
                     ? new Notification.Builder(hostContext, CHANNEL_ID)
                     : new Notification.Builder(hostContext);
-            builder.setSmallIcon(icon)
-                    .setContentTitle(safe(title))
+            h.Hchat.hooks.items.customnotify.CustomNotificationIconStore.apply(builder, icon, hostContext);
+            builder.setContentTitle(safe(title))
                     .setContentText(safe(text))
                     .setTicker(safe(text))
                     .setWhen(System.currentTimeMillis())

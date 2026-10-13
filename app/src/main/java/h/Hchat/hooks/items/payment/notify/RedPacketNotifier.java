@@ -110,8 +110,8 @@ public class RedPacketNotifier {
             PendingIntent contentIntent = buildContentIntent(talker, nativeUrl, idSalt);
             int defaults = 0;
             if (vibrate) defaults |= Notification.DEFAULT_VIBRATE;
-            builder.setSmallIcon(icon)
-                    .setContentTitle(title)
+            h.Hchat.hooks.items.customnotify.CustomNotificationIconStore.apply(builder, icon, hostContext);
+            builder.setContentTitle(title)
                     .setContentText(text)
                     .setTicker(text)
                     .setWhen(System.currentTimeMillis())

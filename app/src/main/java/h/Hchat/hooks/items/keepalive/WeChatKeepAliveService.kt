@@ -1,5 +1,7 @@
 package h.Hchat.hooks.items.keepalive
 
+import h.Hchat.hooks.items.customnotify.CustomNotificationIconStore
+
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -62,8 +64,7 @@ class WeChatKeepAliveService : Service() {
             @Suppress("DEPRECATION")
             Notification.Builder(this)
         }
-        return builder
-            .setSmallIcon(R.drawable.ic_launcher)
+        return CustomNotificationIconStore.apply(builder, R.drawable.ic_launcher, this)
             .setContentTitle("Hchat 微信强保活")
             .setContentText("正在尝试保持微信息屏运行")
             .setOngoing(true)

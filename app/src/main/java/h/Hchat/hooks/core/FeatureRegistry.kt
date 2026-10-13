@@ -16,6 +16,7 @@ import h.Hchat.hooks.items.conversationtabs.ConversationTabsFeature
 import h.Hchat.hooks.items.custombottombar.CustomBottomBarFeature
 import h.Hchat.hooks.items.customfriendavatar.CustomFriendAvatarFeature
 import h.Hchat.hooks.items.customnotify.CustomNotificationFeature
+import h.Hchat.hooks.items.customnotify.CustomNotificationIconFeature
 import h.Hchat.hooks.items.editmsg.EditMessageFeature
 import h.Hchat.hooks.items.emojisave.EmojiSaveFeature
 import h.Hchat.hooks.items.fakelocation.FakeLocationFeature
@@ -135,6 +136,7 @@ object FeatureRegistry {
             .register(CallMediaLimitFeature())
             .register(CallRingtoneBlockFeature())
             .register(CustomNotificationFeature())
+            .register(CustomNotificationIconFeature())
             .register(KeywordNotificationFeature())
             .register(TextSpeechFeature())
             .register(TextVoiceFeature())
